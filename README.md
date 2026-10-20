@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenCal
 
-## Getting Started
+Free, open-source booking links: a TidyCal-style scheduler you host yourself.
+Clients open your link, pick an open time in their own timezone, and book. You get a
+calendar invite, they get a confirmation, and it never double-books.
 
-First, run the development server:
+Built after studying TidyCal's public booking flow with [REA](https://github.com/morluto/rea),
+recording behavior only, no copied code. See [docs/tidycal-findings.md](docs/tidycal-findings.md).
 
+## Features
+- Profile page (`/your-name`) listing your booking types
+- Booking page per type (`/your-name/intro-call`) with month calendar, slot list and visitor timezone
+- Weekly hours, per-type duration, start-time step, buffer, minimum notice and booking window
+- Conflict checking against your real calendar through its private iCal URL (Google, Outlook, iCloud), with no OAuth
+- Confirmation page with "Add to calendar" (.ics) and self-serve cancel link
+- Optional confirmation and cancellation emails with invite attached (Resend)
+- Admin at `/admin`: copy share links, manage booking types and hours, see and cancel bookings
+- Race-safe: bookings are serialized with a Postgres advisory lock
+
+## Run it
 ```bash
+cp .env.example .env.local   # set ADMIN_PASSWORD
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
+Open http://localhost:3000, then http://localhost:3000/admin.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+With no `DATABASE_URL`, OpenCal uses an embedded Postgres (PGlite) saved in `.data/`. That's fine for
+a single server. For Vercel or other serverless hosts, set `DATABASE_URL` to a hosted
+Postgres (Supabase, Neon). Tables are created automatically on first run.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy (Vercel + Supabase)
+1. Create a Postgres database and copy its connection string (Supabase: use the pooler URL).
+2. Import the repo in Vercel and set `ADMIN_PASSWORD`, `DATABASE_URL`, `APP_URL`, `OWNER_*`
+   and optionally `RESEND_API_KEY` / `EMAIL_FROM`.
+3. Share `https://your-domain/your-name`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT licensed.
