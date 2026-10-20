@@ -1,44 +1,55 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { timingSafeEqual } from "node:crypto";
+import { eq } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { sign, verifySigned } from "./crypto";
+import { getDb, schema } from "./db";
+import type { User } from "./db/schema";
 
-const COOKIE = "opencal_admin";
+const SESSION = "opencal_session";
+const MAX_AGE = 60 * 60 * 24 * 30;
 
-function secret() {
-  const s = process.env.AUTH_SECRET ?? process.env.ADMIN_PASSWORD;
-  if (!s) throw new Error("Set ADMIN_PASSWORD in .env.local to use the admin area.");
-  return s;
-}
-
-const sign = (value: string) => createHmac("sha256", secret()).update(value).digest("hex");
-
-export function passwordMatches(input: string) {
-  const expected = Buffer.from(process.env.ADMIN_PASSWORD ?? "");
-  const given = Buffer.from(input);
-  return expected.length > 0 && expected.length === given.length && timingSafeEqual(expected, given);
-}
-
-export async function startSession() {
-  const store = await cookies();
-  store.set(COOKIE, sign("admin"), {
+export async function startSession(userId: number) {
+  const value = `${userId}:${Date.now() + MAX_AGE * 1000}`;
+  (await cookies()).set(SESSION, `${value}.${sign(value)}`, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: MAX_AGE,
   });
 }
 
 export async function endSession() {
-  (await cookies()).delete(COOKIE);
+  (await cookies()).delete(SESSION);
 }
 
-export async function isAdmin() {
-  const value = (await cookies()).get(COOKIE)?.value;
-  return !!value && !!process.env.ADMIN_PASSWORD && value === sign("admin");
+export async function getCurrentUser(): Promise<User | null> {
+  const value = verifySigned((await cookies()).get(SESSION)?.value);
+  if (!value) return null;
+  const [id, expires] = value.split(":").map(Number);
+  if (!id || expires < Date.now()) return null;
+  const db = await getDb();
+  const [user] = await db.select().from(schema.users).where(eq(schema.users.id, id));
+  return user?.active ? user : null;
 }
 
-export async function requireAdmin() {
-  if (!(await isAdmin())) redirect("/admin/login");
+export async function requireUser(): Promise<User> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/admin/login");
+  return user;
+}
+
+export async function requireOwner(): Promise<User> {
+  const user = await requireUser();
+  if (user.role !== "owner") redirect("/admin");
+  return user;
+}
+
+/** Local fallback when Google sign-in isn't configured: ADMIN_PASSWORD signs in as the owner. */
+export function passwordMatches(input: string) {
+  const expected = Buffer.from(process.env.ADMIN_PASSWORD ?? "");
+  const given = Buffer.from(input);
+  return expected.length > 0 && expected.length === given.length && timingSafeEqual(expected, given);
 }

@@ -4,11 +4,11 @@ import { DateTime } from "luxon";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { bookAction, type BookState } from "./actions";
 
-type Props = { slug: string; slots: string[]; durationMinutes: number; ownerName: string; title: string };
+type Props = { username: string; slug: string; slots: string[]; durationMinutes: number; ownerName: string; title: string };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export function BookingWidget({ slug, slots, durationMinutes, ownerName, title }: Props) {
+export function BookingWidget({ username, slug, slots, durationMinutes, ownerName, title }: Props) {
   const [tz, setTz] = useState<string | null>(null);
   const [month, setMonth] = useState<DateTime | null>(null);
   const [day, setDay] = useState<string | null>(null);
@@ -59,6 +59,7 @@ export function BookingWidget({ slug, slots, durationMinutes, ownerName, title }
           <dd className="font-medium">{durationMinutes} minutes</dd>
         </dl>
         <form action={formAction} className="mt-5 space-y-4">
+          <input type="hidden" name="username" value={username} />
           <input type="hidden" name="slug" value={slug} />
           <input type="hidden" name="start" value={slot} />
           <input type="hidden" name="timezone" value={tz} />

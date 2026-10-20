@@ -47,6 +47,9 @@ export function TypeForm({ type: t, username }: { type: BookingType | null; user
         <Num name="maxDaysAhead" label="Bookable up to (days ahead)" value={t?.maxDaysAhead ?? 30} />
       </div>
       <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" name="addMeet" defaultChecked={t?.addMeet ?? true} /> Add a Google Meet link (when no location is set)
+      </label>
+      <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="active" defaultChecked={t?.active ?? true} /> Accepting bookings
       </label>
       {state.error && <p className="text-sm text-red-600">{state.error}</p>}

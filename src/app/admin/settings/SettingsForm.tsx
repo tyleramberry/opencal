@@ -1,12 +1,12 @@
 "use client";
 
 import { useActionState } from "react";
-import type { Profile } from "@/lib/db/schema";
+import type { User } from "@/lib/db/schema";
 import { saveSettingsAction } from "../actions";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-export function SettingsForm({ profile: p }: { profile: Profile }) {
+export function SettingsForm({ profile: p }: { profile: User }) {
   const [state, action, pending] = useActionState(saveSettingsAction, {});
   const zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : [p.timezone];
 
@@ -22,10 +22,6 @@ export function SettingsForm({ profile: p }: { profile: Profile }) {
           <div>
             <label className="label" htmlFor="username">Username (your link)</label>
             <input id="username" name="username" defaultValue={p.username} className="input" />
-          </div>
-          <div>
-            <label className="label" htmlFor="email">Email for booking alerts</label>
-            <input id="email" name="email" type="email" defaultValue={p.email ?? ""} className="input" />
           </div>
           <div>
             <label className="label" htmlFor="heading">Page heading</label>
@@ -63,10 +59,10 @@ export function SettingsForm({ profile: p }: { profile: Profile }) {
 
       <section className="card space-y-3 p-6">
         <div>
-          <h2 className="text-lg font-bold">Calendar conflicts</h2>
+          <h2 className="text-lg font-bold">Other calendars (optional)</h2>
           <p className="text-sm text-gray-500">
-            Paste your calendar&apos;s private iCal address, one per line. Busy events block those times. In Google Calendar:
-            Settings → your calendar → Integrate calendar → <em>Secret address in iCal format</em>.
+            Block busy times from calendars that aren&apos;t your main Google Calendar (Outlook, iCloud, a second Google
+            account): paste each one&apos;s private iCal address, one per line.
           </p>
         </div>
         <textarea name="calendarFeeds" rows={3} className="input font-mono text-xs" defaultValue={p.calendarFeeds.join("\n")} placeholder="https://calendar.google.com/calendar/ical/.../basic.ics" />

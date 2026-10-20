@@ -1,31 +1,31 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getProfileByUsername, listBookingTypes } from "@/lib/data";
+import { getUserByUsername, listBookingTypes } from "@/lib/data";
 import { initials } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
-  const p = await getProfileByUsername(username);
-  if (!p) notFound();
-  const types = await listBookingTypes({ activeOnly: true });
+  const user = await getUserByUsername(username);
+  if (!user) notFound();
+  const types = await listBookingTypes(user.id, { activeOnly: true });
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-12">
       <div className="mb-8 flex flex-col items-center text-center">
         <div className="mb-3 flex h-20 w-20 items-center justify-center rounded-full bg-brand text-2xl font-bold text-white">
-          {initials(p.name)}
+          {initials(user.name)}
         </div>
-        <h1 className="text-2xl font-bold">{p.name}</h1>
-        <p className="mt-2 text-gray-600">{p.heading}</p>
+        <h1 className="text-2xl font-bold">{user.name}</h1>
+        <p className="mt-2 text-gray-600">{user.heading}</p>
       </div>
 
       <ul className="space-y-3">
         {types.map((t) => (
           <li key={t.id}>
             <Link
-              href={`/${p.username}/${t.slug}`}
+              href={`/${user.username}/${t.slug}`}
               className="card flex items-center justify-between gap-4 p-5 transition hover:border-brand hover:shadow-md"
             >
               <div>

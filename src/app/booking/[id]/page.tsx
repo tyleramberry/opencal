@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getBooking, getProfile } from "@/lib/data";
+import { getBooking } from "@/lib/data";
 import { cancelAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +17,7 @@ export default async function BookingDetails({
   const { token = "", new: isNew } = await searchParams;
   const row = await getBooking(id, token);
   if (!row) notFound();
-  const p = await getProfile();
-  const { booking, type } = row;
+  const { booking, type, host: p } = row;
   const start = DateTime.fromJSDate(booking.startsAt).setZone(booking.timezone);
   const cancelled = booking.status === "cancelled";
   const past = booking.endsAt.getTime() < Date.now();
@@ -34,7 +33,7 @@ export default async function BookingDetails({
         </h1>
         {!cancelled && isNew && (
           <p className="mt-2 text-sm text-gray-600">
-            {process.env.RESEND_API_KEY
+            {booking.googleEventId || process.env.RESEND_API_KEY
               ? `A calendar invite is on its way to ${booking.email}.`
               : "Save this page — use “Add to calendar” below to get the invite."}
           </p>
@@ -51,10 +50,18 @@ export default async function BookingDetails({
           <dd className="font-medium">{booking.timezone}</dd>
           <dt className="text-gray-500">Duration</dt>
           <dd className="font-medium">{type.durationMinutes} minutes</dd>
-          {type.location && (
+          {(booking.meetUrl || type.location) && (
             <>
               <dt className="text-gray-500">Where</dt>
-              <dd className="font-medium">{type.location}</dd>
+              <dd className="font-medium break-all">
+                {booking.meetUrl ? (
+                  <a className="text-brand underline" href={booking.meetUrl} target="_blank" rel="noreferrer">
+                    {booking.meetUrl.replace("https://", "")}
+                  </a>
+                ) : (
+                  type.location
+                )}
+              </dd>
             </>
           )}
         </dl>

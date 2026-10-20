@@ -1,7 +1,7 @@
 import { DateTime } from "luxon";
 import Link from "next/link";
-import { requireAdmin } from "@/lib/auth";
-import { getProfile, listBookingTypes, listUpcomingBookings } from "@/lib/data";
+import { requireUser } from "@/lib/auth";
+import { listBookingTypes, listUpcomingBookings } from "@/lib/data";
 import { adminCancelAction } from "./actions";
 import { AdminNav } from "./AdminNav";
 import { CopyLink } from "./CopyLink";
@@ -9,12 +9,18 @@ import { CopyLink } from "./CopyLink";
 export const dynamic = "force-dynamic";
 
 export default async function AdminHome() {
-  await requireAdmin();
-  const [p, types, upcoming] = await Promise.all([getProfile(), listBookingTypes(), listUpcomingBookings()]);
+  const p = await requireUser();
+  const [types, upcoming] = await Promise.all([listBookingTypes(p.id), listUpcomingBookings(p.id)]);
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
-      <AdminNav username={p.username} />
+      <AdminNav user={p} />
+
+      {!p.googleRefreshToken && (
+        <Link href="/admin/settings" className="mb-8 block rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Your Google Calendar isn&apos;t connected, so busy times won&apos;t be blocked. <span className="font-semibold underline">Connect it →</span>
+        </Link>
+      )}
 
       <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">
@@ -60,6 +66,7 @@ export default async function AdminHome() {
                   {booking.name} · <a className="text-brand" href={`mailto:${booking.email}`}>{booking.email}</a>
                 </p>
                 {booking.notes && <p className="mt-1 text-sm whitespace-pre-line text-gray-500">“{booking.notes}”</p>}
+                {booking.meetUrl && <a className="mt-1 block text-sm text-brand" href={booking.meetUrl} target="_blank" rel="noreferrer">Join Google Meet</a>}
               </div>
               <form action={adminCancelAction}>
                 <input type="hidden" name="id" value={booking.id} />

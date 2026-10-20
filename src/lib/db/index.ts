@@ -6,19 +6,32 @@ import * as schema from "./schema";
 type Db = ReturnType<typeof drizzlePostgres<typeof schema>>;
 
 const SETUP_SQL = `
-create table if not exists profile (
-  id integer primary key,
-  username text not null,
+create table if not exists users (
+  id serial primary key,
+  username text not null unique,
   name text not null,
+  email text not null unique,
   heading text not null default 'Book a call with me:',
-  email text,
   timezone text not null,
   weekly_hours jsonb not null,
-  calendar_feeds jsonb not null default '[]'
+  calendar_feeds jsonb not null default '[]',
+  role text not null default 'member',
+  active boolean not null default true,
+  google_sub text unique,
+  google_refresh_token text,
+  created_at timestamptz not null default now()
+);
+create table if not exists invites (
+  token text primary key,
+  email text not null,
+  created_by integer not null references users(id),
+  accepted_by integer references users(id),
+  created_at timestamptz not null default now()
 );
 create table if not exists booking_types (
   id serial primary key,
-  slug text not null unique,
+  user_id integer not null references users(id),
+  slug text not null,
   title text not null,
   description text not null default '',
   duration_minutes integer not null,
@@ -27,7 +40,9 @@ create table if not exists booking_types (
   min_notice_hours integer not null default 4,
   max_days_ahead integer not null default 30,
   location text not null default '',
-  active boolean not null default true
+  add_meet boolean not null default true,
+  active boolean not null default true,
+  constraint booking_types_user_slug unique (user_id, slug)
 );
 create table if not exists bookings (
   id text primary key,
@@ -40,41 +55,18 @@ create table if not exists bookings (
   timezone text not null,
   status text not null default 'confirmed',
   manage_token text not null,
+  google_event_id text,
+  meet_url text,
   created_at timestamptz not null default now()
 );
 create index if not exists bookings_starts_at_idx on bookings (starts_at);
 `;
-
-const DEFAULT_HOURS = JSON.stringify(
-  Object.fromEntries(["1", "2", "3", "4", "5"].map((d) => [d, [{ start: "09:00", end: "17:00" }]])),
-);
-
-async function seed(exec: (sql: string, params?: unknown[]) => Promise<unknown>) {
-  await exec(
-    `insert into profile (id, username, name, email, timezone, weekly_hours)
-     values (1, $1, $2, $3, $4, $5::jsonb) on conflict (id) do nothing`,
-    [
-      process.env.OWNER_USERNAME ?? "me",
-      process.env.OWNER_NAME ?? "Your Name",
-      process.env.OWNER_EMAIL ?? null,
-      process.env.OWNER_TIMEZONE ?? "America/Denver",
-      DEFAULT_HOURS,
-    ],
-  );
-  await exec(
-    `insert into booking_types (slug, title, description, duration_minutes, slot_step_minutes)
-     values ('15-minute-meeting', '15 Minute Meeting', 'Book a meeting with me for 15 minutes!', 15, 15),
-            ('30-minute-meeting', '30 Minute Meeting', 'Book a meeting with me for 30 minutes!', 30, 30)
-     on conflict (slug) do nothing`,
-  );
-}
 
 async function create(): Promise<Db> {
   const url = process.env.DATABASE_URL;
   if (url) {
     const client = postgres(url, { prepare: false });
     await client.unsafe(SETUP_SQL);
-    await seed((sql, params) => client.unsafe(sql, params as never[]));
     return drizzlePostgres(client, { schema });
   }
   // No DATABASE_URL: embedded Postgres stored on disk, for local use and single-server self-hosting.
@@ -85,7 +77,6 @@ async function create(): Promise<Db> {
   mkdirSync(dir, { recursive: true });
   const client = new PGlite(dir);
   await client.exec(SETUP_SQL);
-  await seed((sql, params) => client.query(sql, params));
   return drizzlePglite(client, { schema }) as unknown as Db;
 }
 
@@ -99,4 +90,5 @@ export function getDb(): Promise<Db> {
   return globalForDb.opencalDb;
 }
 
+export type { Db };
 export { schema };

@@ -10,6 +10,7 @@ export async function bookAction(_prev: BookState, form: FormData): Promise<Book
   if (form.get("website")) return { error: "Something went wrong. Please try again." };
 
   const result = await createBooking({
+    username: String(form.get("username") ?? ""),
     slug: String(form.get("slug") ?? ""),
     start: String(form.get("start") ?? ""),
     name: String(form.get("name") ?? ""),
